@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Smart Warehouse Storage Allocator — Control Center</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link
+  href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700;800&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap"
+  rel="stylesheet"
+/>
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+<a class="skip-link" href="#main">Skip to content</a>
+
+<header class="hero">
+  <div class="hero__inner">
+    <p class="eyebrow">SMART WAREHOUSE CONTROL CENTER</p>
+    <h1 class="hero__title">SMART WAREHOUSE<br /><span>STORAGE ALLOCATOR</span></h1>
+    <p class="hero__subtitle">ARRAY<span class="dot">•</span>GREEDY<span class="dot">•</span>MAX HEAP</p>
+
+    <div class="pipeline" aria-label="Allocation pipeline">
+      <div class="pipeline__stage" data-stage="array">ARRAY</div>
+      <div class="pipeline__arrow" aria-hidden="true">&rarr;</div>
+      <div class="pipeline__stage" data-stage="greedy">GREEDY BEST-FIT</div>
+      <div class="pipeline__arrow" aria-hidden="true">&rarr;</div>
+      <div class="pipeline__stage" data-stage="heap">MAX HEAP</div>
+      <div class="pipeline__arrow" aria-hidden="true">&rarr;</div>
+      <div class="pipeline__stage" data-stage="best">BEST SLOT</div>
+      <div class="pipeline__arrow" aria-hidden="true">&rarr;</div>
+      <div class="pipeline__stage" data-stage="update">UPDATE ARRAY</div>
+    </div>
+  </div>
+</header>
+
+<main id="main">
+  <section class="presentation-summary" id="presentationSummary" hidden></section>
+
+  <div class="control-deck">
+    <section class="warehouse-panel" aria-labelledby="warehouseHeading">
+      <div class="panel-head">
+        <h2 id="warehouseHeading">Warehouse Array</h2>
+        <p class="panel-sub">5 storage slots &middot; <code>S1&hellip;S5</code></p>
+      </div>
+      <div class="warehouse-grid" id="warehouseGrid"></div>
+    </section>
+
+    <aside class="side-deck">
+      <section class="allocation-panel" aria-labelledby="allocHeading">
+        <div class="panel-head"><h2 id="allocHeading">Incoming Product</h2></div>
+        <form id="productForm">
+          <label>Product ID<input id="productId" type="text" readonly placeholder="auto-assigned" /></label>
+          <label>Product Name<input id="productName" type="text" placeholder="e.g. Laptop" required /></label>
+          <label>Required Space<input id="productSpace" type="number" min="1" placeholder="e.g. 40" required /></label>
+
+          <div class="sample-row">
+            <span class="sample-label">Quick fill</span>
+            <div class="sample-buttons">
+              <button type="button" class="sample-btn" data-name="Laptop" data-space="40">Laptop &mdash; 40</button>
+              <button type="button" class="sample-btn" data-name="Chair" data-space="55">Chair &mdash; 55</button>
+              <button type="button" class="sample-btn" data-name="Monitor" data-space="30">Monitor &mdash; 30</button>
+              <button type="button" class="sample-btn" data-name="Server Rack" data-space="150">Server Rack &mdash; 150</button>
+            </div>
+          </div>
+
+          <button type="submit" class="btn-primary" id="allocateBtn">Allocate Product</button>
+        </form>
+      </section>
+
+      <section class="timeline-panel" aria-labelledby="timelineHeading">
+        <div class="panel-head"><h2 id="timelineHeading">Activity Timeline</h2></div>
+        <ol class="timeline" id="timeline"></ol>
+      </section>
+
+      <section class="complexity-panel" aria-labelledby="complexityHeading" style="background: var(--panel); border: 1px solid var(--conduit); padding: var(--space-5); border-radius: var(--radius-lg); box-shadow: var(--shadow-panel);">
+        <div class="panel-head"><h2 id="complexityHeading">Time Complexity</h2></div>
+        <div style="font-family: var(--font-mono); font-size: 13px; color: var(--fog);">
+          <div style="display: flex; justify-content: space-between; margin-bottom: 8px;"><span>ARRAY SCAN</span><strong style="color: var(--beacon);">O(n)</strong></div>
+          <div style="display: flex; justify-content: space-between; margin-bottom: 8px;"><span>HEAP INSERT</span><strong style="color: var(--beacon);">O(log k)</strong></div>
+          <div style="display: flex; justify-content: space-between; margin-bottom: 8px;"><span>HEAP EXTRACT MAX</span><strong style="color: var(--beacon);">O(log k)</strong></div>
+          <div style="display: flex; justify-content: space-between; margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--conduit);"><span>COMPLETE ALLOCATION</span><strong style="color: var(--hazard);">O(n + k log k)</strong></div>
+          <div style="margin-top: 16px; font-size: 11px; color: var(--haze); letter-spacing: 0.04em;">n = number of warehouse slots<br>k = number of feasible candidates</div>
+        </div>
+      </section>
+    </aside>
+  </div>
+
+  <section class="result-card" id="resultCard" hidden></section>
+
+  <section class="greedy-panel" aria-labelledby="greedyHeading">
+    <div class="panel-head">
+      <h2 id="greedyHeading">Greedy Analysis</h2>
+      <p class="panel-sub">score = &minus;(available &minus; required) &middot; higher score wins</p>
+    </div>
+    <div class="table-wrap">
+      <table class="greedy-table">
+        <thead>
+          <tr><th>Slot</th><th>Available</th><th>Required</th><th>Leftover</th><th>Score</th><th>Status</th></tr>
+        </thead>
+        <tbody id="greedyTableBody"></tbody>
+      </table>
+    </div>
+    <div class="greedy-decision" id="greedyDecision" hidden></div>
+  </section>
+
+  <section class="heap-panel" aria-labelledby="heapHeading">
+    <div class="panel-head">
+      <h2 id="heapHeading">Max Heap &mdash; Best Slot Candidates</h2>
+      <p class="panel-sub heap-note">The heap is implemented using an array. The binary tree is only a visual representation.</p>
+    </div>
+    <div class="heap-visual">
+      <svg id="heapTree" class="heap-tree" viewBox="0 0 640 260" role="img" aria-label="Heap binary tree, generated from the underlying array"></svg>
+      <div class="heap-array" id="heapArray" aria-label="Underlying heap array"></div>
+    </div>
+  </section>
+</main>
+
+<div class="control-bar">
+  <div class="control-bar__inner">
+    <span class="control-bar__label">Demo Mode</span>
+    <label class="switch">
+      <input type="checkbox" id="demoToggle" />
+      <span class="switch__track"></span>
+    </label>
+    <button class="btn-ghost" id="presentationToggle" type="button">Presentation Mode</button>
+    <div class="control-bar__spacer"></div>
+    <button class="btn-ghost" id="resetBtn" type="button">Reset</button>
+    <button class="btn-ghost" id="nextStepBtn" type="button" disabled>Next Step</button>
+    <button class="btn-primary" id="runDemoBtn" type="button">Run Full Demo</button>
+  </div>
+</div>
+
+<script src="dsa-engine.js"></script>
+<script src="ui.js"></script>
+</body>
+</html>
